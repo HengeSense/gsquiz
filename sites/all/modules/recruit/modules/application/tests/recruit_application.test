@@ -1,0 +1,160 @@
+<?php
+
+/**
+ * @file
+ * Unit/Functional tests for the application module.
+ */
+
+/**
+ * Test the application and application type CRUD.
+ */
+class RecruitApplicationCRUDTestCase extends DrupalWebTestCase {
+  public static function getInfo() {
+    return array(
+      'name' => 'Recruit application API CRUD',
+      'description' => 'Tests the application CRUD functions.',
+      'group' => 'Recruit',
+    );
+  }
+
+  function setUp() {
+    parent::setUp('recruit_application');
+  }
+
+  /**
+   * Ensure the default application types are created when installing recruit_application.module.
+  */
+  function testRecruitApplicationDefaultApplications() {
+    $default_types = array(
+      'application' => 'application',
+    );
+
+    $types_created = recruit_application_get_types();
+    
+    // Not testing for default application type.
+    foreach ($default_types as $type => $name) {
+      $this->assertTrue(!empty($types_created[$type]), 'application type ' . check_plain($type) . ' has been created.');
+    }
+  }
+
+  /**
+   * Test the application type CRUD functions.
+   */
+  function testRecruitApplicationTypeCrud() {
+    // Ensure recruit_application_type_new() returns a valid empty application type.
+    $new_application_type = recruit_application_type_new();
+    $this->assertNotNull($new_application_type->type, 'recruit_application_type_new() instantiated the type property.');
+    $this->assertNotNull($new_application_type->label, 'recruit_application_type_new() instantiated the name property.');
+    $this->assertNotNull($new_application_type->description, 'recruit_application_type_new() instantiated the description property.');
+    $this->assertNotNull($new_application_type->help, 'recruit_application_type_new() instantiated the help property');
+
+    // Supply customer values for the application type properties.
+    $type = $this->randomName(20);
+    $name = $this->randomName(40);
+    $description = $this->randomString(128);
+    $help = $this->randomString(128);
+
+    // Add the values to the new content type.
+    $new_application_type->type = $type;
+    $new_application_type->label = $name;
+    $new_application_type->description = $description;
+    $new_application_type->help = $help;
+    $new_application_type->is_new = TRUE;
+
+    // Ensure recruit_application_type_new() returns the proper value when inserting.
+    $return = recruit_application_type_save($new_application_type);
+    $this->assertEqual($return, SAVED_NEW, 'recruit_application_type_save() returned SAVED_NEW when saving a new application type.');
+
+    // Load the newly saved content type.
+    $saved_application_type = recruit_application_type_load($type);
+
+    // Ensure the values that were saved match the values that we created.
+    $this->assertTrue($saved_application_type, 'recruit_application_type_load() loaded the new application type.');
+    $this->assertEqual($type, $saved_application_type->type, 'The new application type type was properly saved and loaded.');
+    $this->assertEqual($name, $saved_application_type->label, 'The new application type label was properly saved and loaded.');
+    $this->assertEqual($description, $saved_application_type->description, 'The new application type description text was properly saved and loaded.');
+    $this->assertEqual($help, $saved_application_type->help, 'The new application type help text was properly saved and loaded.');
+
+    // Alter the title, to ensure the update function works.
+    $altered_name = $this->randomName(40);
+    $saved_application_type->label = $altered_name;
+    
+    // Ensure recruit_application_type_save() returns the proper value when updating.
+    $return = recruit_application_type_save($saved_application_type);
+    $this->assertEqual($return, SAVED_UPDATED, 'recruit_application_type_save() returned SAVED_UPDATED when saving an updated application type.');
+
+    // Reset the cached application types, and verify recruit_application_get_types load the saved type.
+    #recruit_application_types_reset();
+    $types = recruit_application_get_types();
+    $this->assertNotNull($types[$type], 'recruit_application_types_reset() successfully reset the application types.');
+    $this->assertEqual($saved_application_type->label, $altered_name, 'recruit_application_type_save() successfully updated the application type name.');
+
+    // Ensure recruit_application_type_delete() deletes a content type.
+    recruit_application_type_delete($saved_application_type);
+    $deleted_type = recruit_application_type_load($type);
+    $this->assertFalse($deleted_type, 'recruit_application_type_delete() successfully removed a application type.');
+  }
+
+  /**
+   * Test the application CRUD functions.
+   */
+  function testRecruitApplicationCrud() {
+    // Ensure recruit_application_new() returns a new application.
+    $new_application = recruit_application_new('application');
+    $fields = array('aid', 'first_name', 'last_name', 'type', 'uid');
+    foreach ($fields as $field) {
+      $this->assertNotNull($new_application->{$field}, 'recruit_application_new() instantiated the ' . check_plain($field) . ' property.');
+    }
+
+    $new_application->first_name = $first_name = $this->randomName(10);
+    $new_application->last_name = $last_name = $this->randomName(10);
+    $new_application->type = $type = 'application';
+    $new_application->uid = $uid = 1;
+
+    // Ensure recruit_application_save() returs TRUE when saving a new application.
+    $return = recruit_application_save($new_application);
+    $this->assertEqual($return, SAVED_NEW, 'recruit_application_save() returned SAVED_NEW when saving a new application.');
+
+    // Ensure recruit_application_load() loaded the saved application.
+    $loaded_application = recruit_application_load($new_application->aid);
+    foreach ($fields as $field) {
+      $this->assertEqual($loaded_application->{$field}, $new_application->{$field}, 'The ' . check_plain($field) . ' value loaded by recruit_application_load() matches the value saved by recruit_application_save()');
+    }
+
+    $this->assertTrue($loaded_application->created > 0, 'recruit_application_save() added a created date to the application');
+    $this->assertTrue($loaded_application->changed > 0, 'recruit_application_save() added a changed date to the application');
+
+    // Ensure recruit_application_load_multiple() can load multiple applications.
+    $saved_applications = array();
+
+    // First create and save multiple new applications.
+    for ($i = 0; $i < 3; $i++) {
+      $application = recruit_application_new('application');
+      $application->type = 'application';
+      $application->first_name = $this->randomName(10);
+      $application->last_name = $this->randomName(10);
+      $application->uid = 1;
+      recruit_application_save($application);
+
+      // Save the ID and title of the newly created application.
+      $saved_applications[$application->aid] = $application->first_name;
+    }
+
+    $loaded_applications = recruit_application_load_multiple(array_keys($saved_applications));
+    $this->assertEqual(count($saved_applications), count($loaded_applications), 'recruit_application_load_multiple() loaded the proper number of the applications.');
+    foreach ($loaded_applications as $loaded_application) {
+      $this->assertEqual($loaded_application->first_name, $saved_applications[$loaded_application->aid], 'recruit_application_load_multiple() successfully loaded a application.');
+    }
+
+    // Ensure recruit_app_delete() can remove a application.
+    $return = recruit_application_delete($new_application);
+    $deleted_application_load = recruit_application_load_multiple(array($new_application->aid), array(), TRUE);
+    $this->assertFalse($deleted_application_load, 'recruit_application_load_multiple() could not load the deleted application.');
+
+    // Ensure recruit_application_delete_multiple() can delete multiple applications.
+    $return = recruit_application_delete_multiple(array_keys($saved_applications));
+    $deleted_applications_load = recruit_application_load_multiple(array_keys($saved_applications), array(), TRUE);
+    $this->assertFalse($deleted_applications_load, 'recruit_application_load_multiple() could not load the deleted applications.');
+  }
+ 
+}

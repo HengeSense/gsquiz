@@ -1,0 +1,30 @@
+name = Application
+description = Enables e-recruitment on site.
+
+package = Recruit Core
+dependencies[] = entity
+dependencies[] = relation
+dependencies[] = recruit
+
+files[] = recruit_application.module
+files[] = recruit_application.info.inc
+files[] = includes/recruit_application.admin.inc
+files[] = tests/recruit_application.test
+
+; Views handlers
+files[] = includes/views/handlers/recruit_application_handler_field_application.inc
+files[] = includes/views/handlers/recruit_application_handler_field_application_type.inc
+files[] = includes/views/handlers/recruit_application_handler_field_application_link.inc
+files[] = includes/views/handlers/recruit_application_handler_field_application_link_edit.inc
+files[] = includes/views/handlers/recruit_application_handler_field_application_link_delete.inc
+files[] = includes/views/handlers/recruit_application_handler_field_application_operations.inc
+files[] = includes/views/handlers/recruit_application_handler_field_application_full_name.inc
+files[] = includes/views/handlers/recruit_application_handler_field_application_relation.inc
+
+core = 7.x
+; Information added by drupal.org packaging script on 2011-05-29
+version = "7.x-1.0-alpha2"
+core = "7.x"
+project = "recruit"
+datestamp = "1306632719"
+
